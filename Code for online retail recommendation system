@@ -1,0 +1,116 @@
+# Project Report: Online Retail Recommendation System
+
+# Importing necessary libraries
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+data = pd.read_excel('OnlineRetail.xlsx')
+
+
+print("Dataset Info:")
+data.info()
+
+# the first few rows of the dataset
+print("\nFirst 5 rows of the dataset:")
+print(data.head())
+
+# Step 1: Data Preprocessing
+
+# Check for missing values
+print("\nMissing values per column:")
+print(data.isnull().sum())
+
+#column names for verification
+print("\nColumn names in the dataset:", data.columns)
+
+# Check for the presence of 'CustomerID' (correct name)
+if 'CustomerID' in data.columns:
+    # Drop rows with missing Customer ID
+    data_cleaned = data.dropna(subset=['CustomerID'])
+else:
+    raise KeyError("The column 'CustomerID' is not present in the dataset. Please verify the dataset.")
+
+# Remove duplicates
+data_cleaned = data_cleaned.drop_duplicates()
+
+# Remove rows with negative or zero quantities and unit prices
+data_cleaned = data_cleaned[(data_cleaned['Quantity'] > 0) & (data_cleaned['UnitPrice'] > 0)]
+
+# Display the shape of the cleaned dataset
+print("\nShape of cleaned dataset:", data_cleaned.shape)
+
+# Step 2: Data Analysis
+
+# Most popular products globally
+popular_products = data_cleaned.groupby('Description')['Quantity'].sum().sort_values(ascending=False).head(10)
+print("\nTop 10 popular products globally:")
+print(popular_products)
+
+# Visualizing top 10 popular products globally
+plt.figure(figsize=(10, 6))
+popular_products.plot(kind='bar', color='skyblue')
+plt.title('Top 10 Popular Products Globally')
+plt.ylabel('Quantity Sold')
+plt.xlabel('Product Description')
+plt.xticks(rotation=45, ha='right')
+plt.show()
+
+# Popular products by country
+country_wise_products = data_cleaned.groupby(['Country', 'Description'])['Quantity'].sum().reset_index()
+print("\nTop 5 countries with popular products:")
+print(country_wise_products.sort_values(by=['Country', 'Quantity'], ascending=[True, False]).head(10))
+
+# Monthly sales trend
+data_cleaned['InvoiceDate'] = pd.to_datetime(data_cleaned['InvoiceDate'])
+data_cleaned['Month'] = data_cleaned['InvoiceDate'].dt.to_period('M')
+monthly_sales = data_cleaned.groupby('Month')['Quantity'].sum()
+print("\nMonthly sales trend:")
+print(monthly_sales)
+
+# Visualizing monthly sales trend
+plt.figure(figsize=(10, 6))
+monthly_sales.plot(kind='line', marker='o', color='green')
+plt.title('Monthly Sales Trend')
+plt.ylabel('Quantity Sold')
+plt.xlabel('Month')
+plt.xticks(rotation=45)
+plt.grid(True)
+plt.show()
+
+# Step 3: Recommendation System
+
+# Function to recommend popular products globally
+def recommend_globally(n=5):
+    return popular_products.head(n)
+
+# Function to recommend products by country
+def recommend_by_country(country, n=5):
+    products = country_wise_products[country_wise_products['Country'] == country]
+    return products.sort_values('Quantity', ascending=False).head(n)
+
+# Function to recommend products by month
+def recommend_by_month(month, n=5):
+    monthly_data = data_cleaned[data_cleaned['Month'] == month]
+    popular_monthly = monthly_data.groupby('Description')['Quantity'].sum().sort_values(ascending=False)
+    return popular_monthly.head(n)
+
+# Test the functions
+print("\nGlobal Recommendations:")
+print(recommend_globally())
+
+print("\nRecommendations for the UK:")
+print(recommend_by_country('United Kingdom'))
+
+print("\nRecommendations for December 2010:")
+print(recommend_by_month('2010-12'))
+
+# Step 4: Conclusion
+# The project successfully developed a recommendation system for online retail data.
+# Recommendations are provided globally, by country, and by month based on product popularity.
+
+# Export cleaned data to a new file for reference
+data_cleaned.to_excel('Cleaned_OnlineRetail.xlsx', index=False)
+
